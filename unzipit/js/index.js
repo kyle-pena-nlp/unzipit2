@@ -1,7 +1,9 @@
+
+
 import("../pkg/index.js").then(module => {
 
 
-    function init() {
+    function init() { 
 
 
         const dragDropArea = document.getElementById("drag-drop-area");

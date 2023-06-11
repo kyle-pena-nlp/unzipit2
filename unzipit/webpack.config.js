@@ -18,7 +18,11 @@ module.exports = {
   },
   plugins: [
     new CopyPlugin([
-      path.resolve(__dirname, "static")
+      {
+        from: path.resolve(__dirname, "static"),
+        to: dist,
+        ignore: ["index.html","todo.txt"], // Exclude specific files if needed
+      }
     ]),
 
     new WasmPackPlugin({
