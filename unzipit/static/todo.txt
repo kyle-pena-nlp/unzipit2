@@ -1,5 +1,15 @@
+push to GH
+include message for empty zip
+do real error handling
+fix large file UX
+browser extension that detects zip DL links and funnels user to page
+get domain
+get hosting
 make an og:image
 make a twitter card image
+fix large file user interactions
+find and reach out to sites where people download .rar, .7z, .zip
 implement .rar, .7z
 find list of tools websites and promote
+telemetry
 make ad campaign?

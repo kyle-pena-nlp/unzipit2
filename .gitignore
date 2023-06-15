@@ -2,3 +2,4 @@ target/
 **/*.zip
 node_modules/
 git-clone/
+**/package-lock.json

@@ -20,8 +20,7 @@ module.exports = {
     new CopyPlugin([
       {
         from: path.resolve(__dirname, "static"),
-        to: dist,
-        ignore: ["index.html","todo.txt"], // Exclude specific files if needed
+        ignore: ["todo.txt"], // Exclude specific files if needed
       }
     ]),
 

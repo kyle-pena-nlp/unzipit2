@@ -13,19 +13,55 @@ import("../pkg/index.js").then(module => {
 
         function createFileNameLink(data, file_name) {
             let a = document.createElement('a');
+            a.classList.add("download-link")
             a.innerText = file_name;
-            a.addEventListener('click', event => {
-                const f = module.unzip_file(data, file_name);
-                const file_bytes = f.file_bytes;
-                let blob = new Blob([file_bytes], { type: 'application/octet-stream' });
-                let objectUrl = URL.createObjectURL(blob);
-                let tempLink = document.createElement('a');
-                tempLink.href = objectUrl;
-                tempLink.download = file_name;
-                document.body.appendChild(tempLink);
-                tempLink.click();
-                document.body.removeChild(tempLink);
-                URL.revokeObjectURL(objectUrl);
+
+            a.addEventListener('click', async  event => {
+
+                a.classList.add("downloading");
+                document.body.classList.add("in-progress");
+
+                // give the UI a chance to update
+                await new Promise(resolve => setTimeout(resolve, 0));
+                
+                let objectUrl = null;
+                let tempLink = null;
+                
+                new Promise((resolve,reject) => {
+                    try {
+                        // TODO: workerify this by putting unzip_file in a worker, and sending the .buffer property back to the UI (which is an ArrayBuffer, which doesn't copy)
+                        // find a way to send the file without copying, either.
+                        
+                        const f = module.unzip_file(data, file_name);   
+                        const file_bytes = f.file_bytes;
+                        const blob = new Blob([file_bytes], { type: 'application/octet-stream' });
+                        objectUrl = URL.createObjectURL(blob);
+                        tempLink = document.createElement('a');
+                        tempLink.href = objectUrl;
+                        tempLink.download = file_name;
+                        document.body.appendChild(tempLink);
+                        tempLink.click();        
+                        resolve();
+                    }
+                    catch (reason) {
+                        reject(reason)
+                    }
+                }).finally(() => {
+                    
+                    a.classList.remove("downloading");
+                    document.body.classList.remove("in-progress");
+                    a.classList.add("downloaded");
+                    
+                    if (tempLink) {
+                        document.body.removeChild(tempLink);
+                    }
+                    
+                    if (objectUrl) {
+                        URL.revokeObjectURL(objectUrl);
+                    }
+                })
+
+
             })
             a.href = "javascript:void(0);";
             const li = document.createElement('li');
@@ -62,6 +98,7 @@ import("../pkg/index.js").then(module => {
             };
     
             zipFileReader.onloadstart = function () {
+                document.body.classList.add("in-progress");
                 progressBar.style.display = "";
                 progressBar.value = 0;
                 fileListArea.innerHTML = "";
@@ -69,10 +106,12 @@ import("../pkg/index.js").then(module => {
     
             zipFileReader.onerror = function () {
                 // some kind of error handling
+                document.body.classList.remove("in-progress");
                 console.error('Error occurred while reading the file');
             };
     
             zipFileReader.onloadend = function () {
+                document.body.classList.remove("in-progress");
                 progressBar.value = 100;
                 progressBar.style.display = "none";
             };
