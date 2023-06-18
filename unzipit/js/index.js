@@ -2,6 +2,35 @@
 
 import("../pkg/index.js").then(module => {
 
+    function isChrome() {
+        return /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    }
+    
+
+    function isValidUrl(url) {
+        try {
+            new URL(url);
+            return true;
+        }   
+        catch (_) {
+            return false;
+        }
+    }
+
+    function hasUrlPassedAsQueryParameter(name) {
+        const param = getParameterByName(name);
+        if (!param) {
+            return false;
+        }
+        return isValidUrl(param);
+    }
+
+    function getParameterByName(name) {
+        const url = URL(window.location.href);
+        const param = url.searchParams.get(name);
+        return param;
+    }
+
 
     function init() { 
 
@@ -10,7 +39,14 @@ import("../pkg/index.js").then(module => {
         const fileInput = document.createElement('input');
         const fileListArea = document.getElementById("file-list-area");
 
+        function createNoContentsMessageElement() {
+            const element = document.createElement("div");
+            element.classList.add("no-content-message");
+            element.innerHTML = "There are no files in this zip.";
+            return element;
+        }
 
+        // creates a clickable link to download a file in the zip
         function createFileNameLink(data, file_name) {
             let a = document.createElement('a');
             a.classList.add("download-link")
@@ -69,14 +105,22 @@ import("../pkg/index.js").then(module => {
             return li;
         }
         
+        // creates clickable links for each file in the zip
         function render_file_names(data, directory) {
-            for (const file_name of directory.file_names) {
-                console.log(file_name + " - listed");
-                const link = createFileNameLink(data, file_name);
-                fileListArea.appendChild(link);
+            if (!directory.file_names.length) {
+                const noContentsMessageElement = createNoContentsMessageElement();
+                fileListArea.appendChild(noContentsMessageElement)
+            }
+            else {
+                for (const file_name of directory.file_names) {
+                    console.log(file_name + " - listed");
+                    const link = createFileNameLink(data, file_name);
+                    fileListArea.appendChild(link);
+                }
             }
         }
 
+        // reads a file into memory, renders download links for each file in the zip
         function readZipFile(file) {
     
     
@@ -118,8 +162,8 @@ import("../pkg/index.js").then(module => {
     
             zipFileReader.onprogress = function (event) {
                 if (event.lengthComputable) {
-                const percentLoaded = (event.loaded / event.total) * 100;
-                progressBar.value = percentLoaded;
+                    const percentLoaded = (event.loaded / event.total) * 100;
+                    progressBar.value = percentLoaded;
                 }
             };
     
@@ -153,6 +197,31 @@ import("../pkg/index.js").then(module => {
             }
         }        
     
+        async function handleZipFileURL(url) {
+            try {
+                const response = await fetch(zipUrl);
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const file = await url.blob();
+
+                readZipFile(file);
+            }
+            catch (error) {
+                console.error(error);
+            }
+        }
+
+        function listenForCrossTabDataFromPlugin() {
+            chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                if (request.fileData) {
+                    fileData = request.fileData;
+                    readZipFile(fileData);
+                }
+            });
+        }
 
     
         dragDropArea.addEventListener('dragover', function (event) {
@@ -181,8 +250,17 @@ import("../pkg/index.js").then(module => {
     
         fileInput.addEventListener('change', handleZipFileSelect);        
         dragDropArea.addEventListener('drop', handleZipFileDrop);
-    
-    
+
+        if (isChrome()) {
+            listenForCrossTabDataFromPlugin()
+        }
+
+        if (hasUrlPassedAsQueryParameter('cors-safe-url')) {
+            const url = getParameterByName('cors-safe-url');
+            handleZipFileURL(url);
+        }
+
+
     }
     
 
